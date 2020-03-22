@@ -29,6 +29,11 @@ function op() {
     command op "$@"
 }
 
+function _op_vaults() {
+    local -a vaults=($(op list vaults 2>/dev/null | jq -r '.[] | .name'))
+    _wanted 'vaults' expl 'vaults' compadd -a vaults
+}
+
 _op_global_flags=(
     '--account+[account to use when multiple sessions are active]:string'
     '--session+[raw session token obtained via '"'"'op signin --raw'"'"']:string'
@@ -130,7 +135,7 @@ function _op_add() {
                         $_op_global_flags[@] \
                         '(- *)'{-h,--help}'[help for group]' \
                         ':<group>:' \
-                        ':<vault>:' \
+                        ':<vault>:_op_vaults' \
                         && ret=0
                     ;;
                 (user)
@@ -188,7 +193,7 @@ function _op_create() {
                         '(- *)'{-h,--help}'[help for document]' \
                         '--tags+[<tags> is a comma-separated list of tags to be added to the document]:<tags>' \
                         '--title+[The <title> of corresponding item]:<title>' \
-                        '--vault+[The <vault> to save the document into]:<vault>' \
+                        '--vault+[The <vault> to save the document into]:<vault>:_op_vaults' \
                         ':<file_name>:_files' \
                         && ret=0
                     ;;
@@ -213,7 +218,7 @@ function _op_create() {
                         '--tags+[<tags> is a comma separated list of tags to be added to the item]:<tags>' \
                         '--title+[The <title> of corresponding item]:<title>' \
                         '--url+[The <url> that should be associated with this item]:<url>' \
-                        '--vault+[The <vault> to save the item into]:<vault>' \
+                        '--vault+[The <vault> to save the item into]:<vault>:_op_vaults' \
                         ":<category>:(($^^items))" \
                         ':<encoded_item>:' \
                         && ret=0
@@ -266,7 +271,7 @@ function _op_delete() {
                     _arguments -S \
                         $_op_global_flags[@] \
                         '(- *)'{-h,--help}'[help for document]' \
-                        '--vault+[Specify the <vault> to delete the document from]:<vault>' \
+                        '--vault+[Specify the <vault> to delete the document from]:<vault>:_op_vaults' \
                         ':document:' \
                         && ret=0
                     ;;
@@ -281,7 +286,7 @@ function _op_delete() {
                     _arguments -S \
                         $_op_global_flags[@] \
                         '(- *)'{-h,--help}'[help for item]' \
-                        '--vault+[Specify the <vault> to delete the item from]:<vault>' \
+                        '--vault+[Specify the <vault> to delete the item from]:<vault>:_op_vaults' \
                         ':<item>:' \
                         && ret=0
                     ;;
@@ -289,7 +294,7 @@ function _op_delete() {
                     _arguments -S \
                         $_op_global_flags[@] \
                         '(- *)'{-h,--help}'[help for trash]' \
-                        ':<vault>:' \
+                        ':<vault>:_op_vaults' \
                         && ret=0
                     ;;
                 (user)
@@ -303,7 +308,7 @@ function _op_delete() {
                     _arguments -S \
                         $_op_global_flags[@] \
                         '(- *)'{-h,--help}'[help for vault]' \
-                        '1:<vault>:' \
+                        '1:<vault>:_op_vaults' \
                         && ret=0
                     ;;
             esac
@@ -413,7 +418,7 @@ function _op_get() {
                         '(- *)'{-h,--help}'[help for document]' \
                         '--include-trash[Include deleted documents]' \
                         '--output+[Save the document to <file path> instead of printing it to stdout]:<file path>:_files' \
-                        '--vault+[Look for the document in this <vault>]:<vault>' \
+                        '--vault+[Look for the document in this <vault>]:<vault>:_op_vaults' \
                         ':<document>:' \
                         && ret=0
                     ;;
@@ -430,7 +435,7 @@ function _op_get() {
                         '(- *)'{-h,--help}'[help for item]' \
                         '--include-trash[Include items in the Trash]' \
                         '--share-link[Return a shareable link for the item]' \
-                        '--vault+[Look for the item in <vault>]:<vault>' \
+                        '--vault+[Look for the item in <vault>]:<vault>:_op_vaults' \
                         ':<item>:' \
                         && ret=0
                     ;;
@@ -451,7 +456,7 @@ function _op_get() {
                     _arguments -S \
                         $_op_global_flags[@] \
                         '(- *)'{-h,--help}'[help for totp]' \
-                        '--vault+[Look for the item in <vault>]:<vault>' \
+                        '--vault+[Look for the item in <vault>]:<vault>:_op_vaults' \
                         ':<item>:' \
                         && ret=0
                     ;;
@@ -468,7 +473,7 @@ function _op_get() {
                     _arguments -S \
                         $_op_global_flags[@] \
                         '(- *)'{-h,--help}'[help for vault]' \
-                        ':<vault>:' \
+                        ':<vault>:_op_vaults' \
                         && ret=0
                     ;;
             esac
@@ -535,7 +540,7 @@ function _op_list() {
                         $_op_global_flags[@] \
                         '(- *)'{-h,--help}'[help for documents]' \
                         '--include-trash[Include documents in the Trash]' \
-                        '--vault+[List documents in <vault>]:<vault>' \
+                        '--vault+[List documents in <vault>]:<vault>:_op_vaults' \
                         && ret=0
                     ;;
                 (events)
@@ -550,7 +555,7 @@ function _op_list() {
                     _arguments -S \
                         $_op_global_flags[@] \
                         '(- *)'{-h,--help}'[help for groups]' \
-                        '--vault+[List groups who have direct access to <vault>]:<vault>' \
+                        '--vault+[List groups who have direct access to <vault>]:<vault>:_op_vaults' \
                         && ret=0
                     ;;
                 (items)
@@ -558,7 +563,7 @@ function _op_list() {
                         $_op_global_flags[@] \
                         '(- *)'{-h,--help}'[help for items]' \
                         '--include-trash[Include items in the Trash]' \
-                        '--vault+[List items in <vault>]:<vault>' \
+                        '--vault+[List items in <vault>]:<vault>:_op_vaults' \
                         && ret=0
                     ;;
                 (templates)
@@ -572,7 +577,7 @@ function _op_list() {
                         $_op_global_flags[@] \
                         '(- *)'{-h,--help}'[help for users]' \
                         '--group+[List users who belong to <group>]:<group>' \
-                        '--vault+[List users who have direct access to <vault>]:<vault>' \
+                        '--vault+[List users who have direct access to <vault>]:<vault>:_op_vaults' \
                         && ret=0
                     ;;
                 (vaults)
@@ -626,7 +631,7 @@ function _op_remove() {
                         $_op_global_flags[@] \
                         '(- *)'{-h,--help}'[help for group]' \
                         ':<group>:' \
-                        ':<vault>:' \
+                        ':<vault>:_op_vaults' \
                         && ret=0
                     ;;
                 (user)
