@@ -1,32 +1,32 @@
-# For `op signin`, override the command to set the profile variable in the
-# shell.
+# 1Password Sign In
 #
-# For `op get totp <item>`, override the command to copy the token to the
-# clipboard, so it can be pasted with <Shift>-<Insert> to another command.
+# This function will run `op signin` with any supplied arguments and eval the
+# command into the current shell.
+function 1ps() {
+    eval $(command op signin "$@")
+    return $?
+}
 
-function op() {
-    local totp
-    local rv
+# 1Password Token Copy
+#
+# This function will run `op get topt` with the supplied arguments and copy
+# the returned Time-based One-Time Password (TOTP) to the paste buffer using
+# the `xclip` command.
+function 1pt() {
+    local totp ret
+    totp="$(command op get totp "$@")"
+    ret=$?
 
-    if [[ $1 == signin ]]; then
-        eval $(command op "$@")
-        return $?
+    if [[ $ret -gt 0 ]]; then
+        return $ret
     fi
 
-    if [[ $1 == get && $2 == totp ]]; then
-        totp="$(command op "$@")"
-        rv=$?
+    printf '%s' "$totp" | xclip
+    return 0
+}
 
-        if [[ $rv -gt 0 ]]; then
-            return $rv
-        fi
 
-        printf '%s' "$totp" | xclip
-        printf '%s\n' "$totp"
-        return 0
-    fi
 
-    command op "$@"
 }
 
 function _op_vaults() {
