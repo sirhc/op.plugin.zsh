@@ -25,13 +25,52 @@ function 1pt() {
     return 0
 }
 
+function _op_users() {
+    if ! type jq >/dev/null 2>&1; then
+        return 0
+    fi
 
+    local -a items=("${(@f)$(op list users 2>/dev/null | jq -r '.[] | "\(.uuid):\(.name) <\(.email)>"')}")
+    _describe -t users user items
+}
 
+function _op_groups() {
+    if ! type jq >/dev/null 2>&1; then
+        return 0
+    fi
+
+    local -a items=("${(@f)$(op list groups 2>/dev/null | jq -r '.[] | "\(.uuid):\(.name) [\(.desc)]"')}")
+    _describe -t groups group items
+}
+
+function _op_groups_and_vaults() {
+    if ! type jq >/dev/null 2>&1; then
+        return 0
+    fi
+
+    local -a items=(
+        "${(@f)$(op list groups 2>/dev/null | jq -r '.[] | "\(.uuid):\(.name) [\(.desc)]"')}"
+        "${(@f)$(op list vaults 2>/dev/null | jq -r '.[] | "\(.uuid):\(.name)"')}"
+    )
+    _describe -t 'groups/vaults' groups-vaults items
+}
+
+function _op_items() {
+    if ! type jq >/dev/null 2>&1; then
+        return 0
+    fi
+
+    local -a items=("${(@f)$(op list items 2>/dev/null | jq -r '.[] | "\(.uuid):\(.overview.title) (\(.overview.ainfo)) <\(.overview.url)>"')}")
+    _describe -t items item items
 }
 
 function _op_vaults() {
-    local -a vaults=($(op list vaults 2>/dev/null | jq -r '.[] | .name'))
-    _wanted 'vaults' expl 'vaults' compadd -a vaults
+    if ! type jq >/dev/null 2>&1; then
+        return 0
+    fi
+
+    local -a items=("${(@f)$(op list vaults 2>/dev/null | jq -r '.[] | "\(.uuid):\(.name)"')}")
+    _describe -t vaults vault items
 }
 
 _op_global_flags=(
@@ -134,7 +173,7 @@ function _op_add() {
                     _arguments -S \
                         $_op_global_flags[@] \
                         '(- *)'{-h,--help}'[help for group]' \
-                        ':<group>:' \
+                        ':<group>:_op_groups' \
                         ':<vault>:_op_vaults' \
                         && ret=0
                     ;;
@@ -143,8 +182,8 @@ function _op_add() {
                         $_op_global_flags[@] \
                         '(- *)'{-h,--help}'[help for user]' \
                         '--role+[Sets the <role> of the user in the group]:<role>' \
-                        ':<user>:' \
-                        '::<vault> | <group>:' \
+                        ':<user>:_op_users' \
+                        '::<vault> | <group>:_op_groups_and_vaults' \
                         && ret=0
                     ;;
             esac
@@ -161,7 +200,7 @@ function _op_confirm() {
     _arguments -S \
         $_op_global_flags[@] \
         '(- *)'{-h,--help}'[help for confirm]' \
-        '(--all)::<user>:' \
+        '(--all)::<user>:_op_users' \
         '--all[Confirm all outstanding invited users]' \
         && ret=0
 
@@ -279,7 +318,7 @@ function _op_delete() {
                     _arguments -S \
                         $_op_global_flags[@] \
                         '(- *)'{-h,--help}'[help for group]' \
-                        ':group:' \
+                        ':group:_op_groups' \
                         && ret=0
                     ;;
                 (item)
@@ -287,7 +326,7 @@ function _op_delete() {
                         $_op_global_flags[@] \
                         '(- *)'{-h,--help}'[help for item]' \
                         '--vault+[Specify the <vault> to delete the item from]:<vault>:_op_vaults' \
-                        ':<item>:' \
+                        ':<item>:_op_items' \
                         && ret=0
                     ;;
                 (trash)
@@ -301,7 +340,7 @@ function _op_delete() {
                     _arguments -S \
                         $_op_global_flags[@] \
                         '(- *)'{-h,--help}'[help for user]' \
-                        ':<user>:' \
+                        ':<user>:_op_users' \
                         && ret=0
                     ;;
                 (vault)
@@ -343,7 +382,7 @@ function _op_edit() {
                         '(- *)'{-h,--help}'[help for group]' \
                         '--description+[The new description of the group]:string' \
                         '--name+[The new <name> of the group]:<name>' \
-                        ':<group>:' \
+                        ':<group>:_op_groups' \
                         && ret=0
                     ;;
                 (user)
@@ -352,7 +391,7 @@ function _op_edit() {
                         '(- *)'{-h,--help}'[help for user]' \
                         '--name+[Set the name of the user to to <name>]:<name>' \
                         '--travelmode+[Enable or disable travel mode]:<on|off>:((on off))' \
-                        ':<user>:' \
+                        ':<user>:_op_users' \
                         && ret=0
                     ;;
             esac
@@ -426,7 +465,7 @@ function _op_get() {
                     _arguments -S \
                         $_op_global_flags[@] \
                         '(- *)'{-h,--help}'[help for group]' \
-                        ':<group>:' \
+                        ':<group>:_op_groups' \
                         && ret=0
                     ;;
                 (item)
@@ -436,7 +475,7 @@ function _op_get() {
                         '--include-trash[Include items in the Trash]' \
                         '--share-link[Return a shareable link for the item]' \
                         '--vault+[Look for the item in <vault>]:<vault>:_op_vaults' \
-                        ':<item>:' \
+                        ':<item>:_op_items' \
                         && ret=0
                     ;;
                 (template)
@@ -457,7 +496,7 @@ function _op_get() {
                         $_op_global_flags[@] \
                         '(- *)'{-h,--help}'[help for totp]' \
                         '--vault+[Look for the item in <vault>]:<vault>:_op_vaults' \
-                        ':<item>:' \
+                        ':<item>:_op_items' \
                         && ret=0
                     ;;
                 (user)
@@ -466,7 +505,7 @@ function _op_get() {
                         '(- *)'{-h,--help}'[help for user]' \
                         '--fingerprint[If set, returns the user'"'"'s public key fingerprint]' \
                         '--publickey[If set, returns the user'"'"'s public key]' \
-                        ':<user>:' \
+                        ':<user>:_op_users' \
                         && ret=0
                     ;;
                 (vault)
@@ -576,7 +615,7 @@ function _op_list() {
                     _arguments -S \
                         $_op_global_flags[@] \
                         '(- *)'{-h,--help}'[help for users]' \
-                        '--group+[List users who belong to <group>]:<group>' \
+                        '--group+[List users who belong to <group>]:<group>:_op_groups' \
                         '--vault+[List users who have direct access to <vault>]:<vault>:_op_vaults' \
                         && ret=0
                     ;;
@@ -584,7 +623,7 @@ function _op_list() {
                     _arguments -S \
                         $_op_global_flags[@] \
                         '(- *)'{-h,--help}'[help for vaults]' \
-                        '--group+[List vaults <group> has access to]:<group>' \
+                        '--group+[List vaults <group> has access to]:<group>:_op_groups' \
                         && ret=0
                     ;;
             esac
@@ -601,7 +640,7 @@ function _op_reactivate() {
     _arguments -S \
         $_op_global_flags[@] \
         '(- *)'{-h,--help}'[help for reactivate]' \
-        ':<user>:' \
+        ':<user>:_op_users' \
         && ret=0
 
     return ret
@@ -630,7 +669,7 @@ function _op_remove() {
                     _arguments -S \
                         $_op_global_flags[@] \
                         '(- *)'{-h,--help}'[help for group]' \
-                        ':<group>:' \
+                        ':<group>:_op_groups' \
                         ':<vault>:_op_vaults' \
                         && ret=0
                     ;;
@@ -638,8 +677,8 @@ function _op_remove() {
                     _arguments -S \
                         $_op_global_flags[@] \
                         '(- *)'{-h,--help}'[help for user]' \
-                        ':<user>:' \
-                        '::<vault> | <group>:' \
+                        ':<user>:_op_users' \
+                        '::<vault> | <group>:_op_groups_and_users' \
                         && ret=0
                     ;;
             esac
@@ -686,7 +725,7 @@ function _op_suspend() {
     _arguments -S \
         $_op_global_flags[@] \
         '(- *)'{-h,--help}'[help for suspend]' \
-        ':user:' \
+        ':user:_op_users' \
         && ret=0
 
     return ret
